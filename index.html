@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PapáCab VIP - Tu chófer 24/7</title>
+  <meta name="description" content="Tu chófer privado 24/7 con humor">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PapáCab VIP">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            gold: {
+              400: '#FBBF24',
+              500: '#F59E0B',
+              600: '#D97706',
+            },
+            dark: {
+              900: '#0a0a0a',
+              800: '#1a1a1a',
+              700: '#2a2a2a',
+              600: '#3a3a3a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-dark-900 text-white min-h-screen">
+  <div id="app"></div>
+
+  <script>
+    // Data
+    const origins = [
+      'Mi habitación desordenada',
+      'El sofá del salón',
+      'Entrada del instituto',
+      'Salida del gimnasio',
+      'Centro Comercial Lagoh',
+    ];
+
+    const destinations = [
+      'Centro comercial Lagoh',
+      'Casa de una amiga',
+      'Cine',
+      "McDonald's/Burguer",
+      "El sofá del salón",
+    ];
+
+    const rates = [
+      {
+        id: 'economy',
+        name: 'Papá Economy',
+        description: 'Conversación no solicitada sobre batallitas del pasado, música de los 80/90 y climatización fija a 22°C',
+        price: '1 Beso en la mejilla + Sacar el lavavajillas',
+        icon: '🚗',
+      },
+      {
+        id: 'confort',
+        name: 'Papá Confort',
+        description: 'Silencio durante el trayecto, aire acondicionado al gusto y cable para cargar el móvil',
+        price: '1 Abrazo sincero + Recoger la mesa',
+        icon: '🚙',
+      },
+      {
+        id: 'premium',
+        name: 'Papá Premium Express',
+        description: 'Salida inmediata interrumpiendo la siesta de papá o un partido',
+        price: 'Lavar el coche el fin de semana + Ordenar la habitación',
+        icon: '🏎️',
+      },
+    ];
+
+    const tips = [
+      'Hacer la cama durante una semana',
+      'Poner la mesa sin rechistar',
+      'Dar un masaje a papá',
+      'No extra bonus',
+    ];
+
+    const comments = [
+      'Muy buen servicio, pero me preguntó tres veces si llevaba la chaqueta',
+      'Conducción suave aunque cantaba en voz alta',
+      'Llegamos a tiempo, aunque se perdió en el camino',
+      'Excelente servicio, como siempre',
+    ];
+
+    const searchingMessages = [
+      'Comprobando si Papá está en la siesta...',
+      'Calculando nivel de paciencia disponible...',
+      'Verificando si hay combustible en el depósito...',
+      'Buscando las llaves del coche...',
+      'Consultando con mamá si puede salir...',
+      'Preparando playlist de los 80...',
+    ];
+
+    // State
+    let state = {
+      screen: 'selection',
+      selectedOrigin: '',
+      selectedDestination: '',
+      selectedRate: '',
+      selectedTip: 'No extra bonus',
+      searchingStatus: 0,
+      selectedRating: 0,
+      selectedComment: '',
+      showAlert: false,
+      tripData: {
+        origin: '',
+        destination: '',
+        rate: '',
+        price: '',
+        tip: '',
+      }
+    };
+
+    let searchInterval = null;
+
+    // Icons (SVG)
+    const icons = {
+      car: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M2 12h12"/></svg>`,
+      mapPin: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,
+      navigation: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>`,
+      star: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+      clock: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+      creditCard: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`,
+      heart: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`,
+      check: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+      alertCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`,
+      zap: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+    };
+
+    // Render functions
+    function render() {
+      const app = document.getElementById('app');
+      let html = '';
+
+      switch (state.screen) {
+        case 'selection':
+          html = renderSelectionScreen();
+          break;
+        case 'rates':
+          html = renderRatesScreen();
+          break;
+        case 'searching':
+          html = renderSearchingScreen();
+          break;
+        case 'payment':
+          html = renderPaymentScreen();
+          break;
+        case 'completed':
+          html = renderCompletedScreen();
+          break;
+      }
+
+      app.innerHTML = html + (state.showAlert ? renderAlert() : '');
+      attachEventListeners();
+    }
+
+    function renderSelectionScreen() {
+      return `
+        <div class="flex flex-col min-h-screen">
+          <header class="bg-gradient-to-r from-dark-800 to-dark-700 p-6 border-b border-dark-600">
+            <div class="flex items-center justify-center gap-3">
+              <span class="text-gold-500 w-8 h-8">${icons.car}</span>
+              <h1 class="text-2xl font-bold bg-gradient-to-r from-gold-400 to-gold-600 bg-clip-text text-transparent">
+                PapáCab VIP
+              </h1>
+            </div>
+            <p class="text-center text-gray-400 mt-2 text-sm">Tu chófer 24/7</p>
+          </header>
+
+          <main class="flex-1 p-6 space-y-6">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  <span class="inline mr-2 w-4 h-4">${icons.mapPin}</span>
+                  Origen
+                </label>
+                <select id="origin-select" class="w-full bg-dark-800 border border-dark-600 rounded-xl p-4 text-white focus:ring-2 focus:ring-gold-500 focus:border-transparent outline-none">
+                  <option value="">Selecciona origen</option>
+                  ${origins.map(o => `<option value="${o}" ${state.selectedOrigin === o ? 'selected' : ''}>${o}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  <span class="inline mr-2 w-4 h-4">${icons.navigation}</span>
+                  Destino
+                </label>
+                <select id="destination-select" class="w-full bg-dark-800 border border-dark-600 rounded-xl p-4 text-white focus:ring-2 focus:ring-gold-500 focus:border-transparent outline-none">
+                  <option value="">Selecciona destino</option>
+                  ${destinations.map(d => `<option value="${d}" ${state.selectedDestination === d ? 'selected' : ''}>${d}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <button id="view-rates-btn" class="w-full py-4 rounded-xl font-semibold text-lg transition-all ${state.selectedOrigin && state.selectedDestination ? 'bg-gradient-to-r from-gold-500 to-gold-600 text-dark-900 hover:from-gold-400 hover:to-gold-500' : 'bg-dark-700 text-gray-500 cursor-not-allowed'}">
+              Ver Tarifas Disponibles
+            </button>
+          </main>
+        </div>
+      `;
+    }
+
+    function renderRatesScreen() {
+      return `
+        <div class="flex flex-col min-h-screen">
+          <header class="bg-gradient-to-r from-dark-800 to-dark-700 p-6 border-b border-dark-600">
+            <button id="back-selection-btn" class="text-gray-400 hover:text-white mb-2">← Volver</button>
+            <h2 class="text-xl font-bold text-white">Selecciona tu tarifa</h2>
+            <p class="text-gray-400 text-sm mt-1">${state.selectedOrigin} → ${state.selectedDestination}</p>
+          </header>
+
+          <main class="flex-1 p-6 space-y-4">
+            ${rates.map(rate => `
+              <button data-rate="${rate.id}" data-price="${rate.price}" class="rate-btn w-full p-5 rounded-xl border-2 transition-all text-left ${state.selectedRate === rate.id ? 'border-gold-500 bg-dark-800' : 'border-dark-600 bg-dark-700 hover:border-dark-500'}">
+                <div class="flex items-start gap-4">
+                  <span class="text-3xl">${rate.icon}</span>
+                  <div class="flex-1">
+                    <h3 class="font-semibold text-lg text-white">${rate.name}</h3>
+                    <p class="text-gray-400 text-sm mt-1">${rate.description}</p>
+                    <div class="mt-3 pt-3 border-t border-dark-600">
+                      <p class="text-gold-400 font-medium text-sm">${rate.price}</p>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            `).join('')}
+          </main>
+        </div>
+      `;
+    }
+
+    function renderSearchingScreen() {
+      const currentMessage = searchingMessages[Math.min(state.searchingStatus, searchingMessages.length - 1)];
+      const showDriver = state.searchingStatus >= searchingMessages.length;
+
+      return `
+        <div class="flex flex-col min-h-screen">
+          <header class="bg-gradient-to-r from-dark-800 to-dark-700 p-6 border-b border-dark-600">
+            <h2 class="text-xl font-bold text-white">Buscando conductor...</h2>
+          </header>
+
+          <main class="flex-1 flex flex-col items-center justify-center p-6">
+            <div class="relative w-48 h-48 mb-8">
+              <div class="absolute inset-0 rounded-full border-4 border-dark-600"></div>
+              <div class="absolute inset-0 rounded-full border-4 border-gold-500 border-t-transparent spinner"></div>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-gold-500 w-16 h-16">${icons.car}</span>
+              </div>
+            </div>
+
+            <div class="text-center space-y-4">
+              <p class="text-xl font-medium text-white">${currentMessage}</p>
+              <div class="flex gap-2 justify-center">
+                ${[0, 1, 2].map(i => `<div class="w-3 h-3 rounded-full bg-gold-500 ${i === state.searchingStatus % 3 ? 'pulse' : 'opacity-50'}"></div>`).join('')}
+              </div>
+            </div>
+
+            ${showDriver ? `
+              <div class="mt-8 bg-dark-800 rounded-xl p-6 border border-dark-600 w-full max-w-sm">
+                <div class="flex items-center gap-4">
+                  <div class="w-16 h-16 bg-gold-500 rounded-full flex items-center justify-center text-2xl">👨</div>
+                  <div class="flex-1">
+                    <h3 class="font-semibold text-white">Papá</h3>
+                    <div class="flex items-center gap-1 mt-1">
+                      <span class="text-gold-500 w-4 h-4">${icons.star}</span>
+                      <span class="text-white">4.98</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-1">Más de 10.000 viajes realizando favores</p>
+                  </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-dark-600 flex items-center gap-2 text-gold-400">
+                  <span class="w-4 h-4">${icons.clock}</span>
+                  <span class="text-sm">Llegada en 5 min (+5 min porque no encuentra las llaves)</span>
+                </div>
+                <button id="continue-payment-btn" class="w-full mt-4 py-3 bg-gradient-to-r from-gold-500 to-gold-600 text-dark-900 rounded-xl font-semibold">
+                  Continuar
+                </button>
+              </div>
+            ` : ''}
+          </main>
+        </div>
+      `;
+    }
+
+    function renderPaymentScreen() {
+      return `
+        <div class="flex flex-col min-h-screen">
+          <header class="bg-gradient-to-r from-dark-800 to-dark-700 p-6 border-b border-dark-600">
+            <button id="back-searching-btn" class="text-gray-400 hover:text-white mb-2">← Volver</button>
+            <h2 class="text-xl font-bold text-white">Método de pago</h2>
+          </header>
+
+          <main class="flex-1 p-6 space-y-6">
+            <div class="bg-dark-800 rounded-xl p-5 border border-dark-600">
+              <h3 class="font-semibold text-white mb-4">Resumen del viaje</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-400">Origen</span>
+                  <span class="text-white">${state.tripData.origin}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-400">Destino</span>
+                  <span class="text-white">${state.tripData.destination}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-400">Tarifa</span>
+                  <span class="text-white">${state.tripData.rate}</span>
+                </div>
+                <div class="flex justify-between pt-2 border-t border-dark-600">
+                  <span class="text-gray-400">Precio</span>
+                  <span class="text-gold-400 font-medium">${state.tripData.price}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <h3 class="font-semibold text-white">Método de pago</h3>
+              <button disabled class="w-full p-4 rounded-xl border border-dark-600 bg-dark-700 text-gray-500 cursor-not-allowed flex items-center gap-3">
+                <span class="w-5 h-5">${icons.creditCard}</span>
+                <span>Tarjeta de Crédito / Dinero</span>
+              </button>
+              <button class="w-full p-4 rounded-xl border-2 border-gold-500 bg-dark-800 text-white flex items-center gap-3">
+                <span class="w-5 h-5 text-gold-500">${icons.heart}</span>
+                <span>Pago con Mimos y Tareas del Hogar</span>
+                <span class="w-5 h-5 text-gold-500 ml-auto">${icons.check}</span>
+              </button>
+            </div>
+
+            <div class="space-y-3">
+              <h3 class="font-semibold text-white">Añadir propina (opcional)</h3>
+              <div class="grid grid-cols-2 gap-3">
+                ${tips.map(tip => `
+                  <button data-tip="${tip}" class="tip-btn p-3 rounded-xl border transition-all text-sm ${state.selectedTip === tip ? 'border-gold-500 bg-dark-800 text-gold-400' : 'border-dark-600 bg-dark-700 text-gray-300 hover:border-dark-⑤00'}">
+                    ${tip}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <button id="confirm-payment-btn" class="w-full py-4 rounded-xl font-semibold text-lg bg-gradient-to-r from-gold-500 to-gold-600 text-dark-900 hover:from-gold-400 hover:to-gold-500 transition-all">
+              Confirmar Solicitud de Viaje
+            </button>
+          </main>
+        </div>
+      `;
+    }
+
+    function renderCompletedScreen() {
+      return `
+        <div class="flex flex-col min-h-screen">
+          <header class="bg-gradient-to-r from-dark-800 to-dark-700 p-6 border-b border-dark-600">
+            <h2 class="text-xl font-bold text-white">¡Viaje finalizado!</h2>
+          </header>
+
+          <main class="flex-1 p-6 space-y-6">
+            <div class="text-center py-8">
+              <div class="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="w-12 h-12 text-white">${icons.check}</span>
+              </div>
+              <h3 class="text-2xl font-bold text-white">¡Gracias por viajar con PapáCab!</h3>
+              <p class="text-gray-400 mt-2">Tu conductor espera tu valoración</p>
+            </div>
+
+            <div class="bg-dark-800 rounded-xl p-5 border border-dark-600">
+              <h3 class="font-semibold text-white mb-4 text-center">Valora tu experiencia</h3>
+              <div class="flex justify-center gap-2">
+                ${[1, 2, 3, 4, 5].map(star => `
+                  <button data-rating="${star}" class="rating-btn transition-all ${state.selectedRating >= star ? 'text-gold-500' : 'text-gray-600 hover:text-gray-400'}">
+                    <span class="w-10 h-10 ${state.selectedRating >= star ? 'text-gold-500' : ''}">${icons.star}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            ${state.selectedRating === 5 ? `
+              <div class="space-y-3">
+                <h3 class="font-semibold text-white">Añade un comentario</h3>
+                <div class="space-y-2">
+                  ${comments.map(comment => `
+                    <button data-comment="${comment}" class="comment-btn w-full p-3 rounded-xl border transition-all text-sm text-left ${state.selectedComment === comment ? 'border-gold-500 bg-dark-800 text-gold-400' : 'border-dark-600 bg-dark-700 text-gray-300 hover:border-dark-500'}">
+                      ${comment}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            ${state.selectedRating === 5 && state.selectedComment ? `
+              <button id="whatsapp-btn" class="w-full py-4 rounded-xl font-semibold text-lg bg-gradient-to-r from-gold-500 to-gold-600 text-dark-900 hover:from-gold-400 hover:to-gold-500 transition-all flex items-center justify-center gap-2">
+                <span class="w-5 h-5">${icons.zap}</span>
+                Enviar a Papá por WhatsApp
+              </button>
+            ` : ''}
+          </main>
+        </div>
+      `;
+    }
+
+    function renderAlert() {
+      return `
+        <div class="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-50">
+          <div class="bg-dark-800 rounded-2xl p-6 max-w-sm w-full border border-dark-600">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="w-8 h-8 text-red-500">${icons.alertCircle}</span>
+              <h3 class="text-xl font-bold text-white">¡Error!</h3>
+            </div>
+            <p class="text-gray-300 mb-6">
+              El conductor sabe dónde vives y cocina tu cena. Mínimo 5 estrellas.
+            </p>
+            <button id="close-alert-btn" class="w-full py-3 bg-gold-500 text-dark-900 rounded-xl font-semibold">
+              Entendido 😅
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Event handlers
+    function attachEventListeners() {
+      // Selection screen
+      const originSelect = document.getElementById('origin-select');
+      const destinationSelect = document.getElementById('destination-select');
+      const viewRatesBtn = document.getElementById('view-rates-btn');
+
+      if (originSelect) {
+        originSelect.addEventListener('change', (e) => {
+          state.selectedOrigin = e.target.value;
+        });
+      }
+
+      if (destinationSelect) {
+        destinationSelect.addEventListener('change', (e) => {
+          state.selectedDestination = e.target.value;
+        });
+      }
+
+      if (viewRatesBtn) {
+        viewRatesBtn.addEventListener('click', () => {
+          if (state.selectedOrigin && state.selectedDestination) {
+            state.screen = 'rates';
+            render();
+          }
+        });
+      }
+
+      // Rates screen
+      const backSelectionBtn = document.getElementById('back-selection-btn');
+      const rateBtns = document.querySelectorAll('.rate-btn');
+
+      if (backSelectionBtn) {
+        backSelectionBtn.addEventListener('click', () => {
+          state.screen = 'selection';
+          render();
+        });
+      }
+
+      rateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rateId = btn.dataset.rate;
+          const price = btn.dataset.price;
+          state.selectedRate = rateId;
+          state.tripData = {
+            origin: state.selectedOrigin,
+            destination: state.selectedDestination,
+            rate: rates.find(r => r.id === rateId)?.name || '',
+            price: price || '',
+            tip: '',
+          };
+          state.screen = 'searching';
+          state.searchingStatus = 0;
+          startSearching();
+          render();
+        });
+      });
+
+      // Searching screen
+      const backSearchingBtn = document.getElementById('back-searching-btn');
+      const continuePaymentBtn = document.getElementById('continue-payment-btn');
+
+      if (backSearchingBtn) {
+        backSearchingBtn.addEventListener('click', () => {
+          clearInterval(searchInterval);
+          state.screen = 'rates';
+          render();
+        });
+      }
+
+      if (continuePaymentBtn) {
+        continuePaymentBtn.addEventListener('click', () => {
+          clearInterval(searchInterval);
+          state.screen = 'payment';
+          render();
+        });
+      }
+
+      // Payment screen
+      const tipBtns = document.querySelectorAll('.tip-btn');
+      const confirmPaymentBtn = document.getElementById('confirm-payment-btn');
+
+      tipBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedTip = btn.dataset.tip;
+          render();
+        });
+      });
+
+      if (confirmPaymentBtn) {
+        confirmPaymentBtn.addEventListener('click', () => {
+          state.tripData.tip = state.selectedTip;
+          state.screen = 'completed';
+          render();
+        });
+      }
+
+      // Completed screen
+      const ratingBtns = document.querySelectorAll('.rating-btn');
+      const commentBtns = document.querySelectorAll('.comment-btn');
+      const whatsappBtn = document.getElementById('whatsapp-btn');
+
+      ratingBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rating = parseInt(btn.dataset.rating);
+          if (rating < 5) {
+            state.showAlert = true;
+            render();
+          } else {
+            state.selectedRating = rating;
+            render();
+          }
+        });
+      });
+
+      commentBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.selectedComment = btn.dataset.comment;
+          render();
+        });
+      });
+
+      if (whatsappBtn) {
+        whatsappBtn.addEventListener('click', () => {
+          const whatsappMessage = `Hola Papá, he solicitado un viaje en PapáCab desde ${state.tripData.origin} hasta ${state.tripData.destination} con la tarifa ${state.tripData.rate}. Me comprometo al pago de: ${state.tripData.price}${state.tripData.tip !== 'No extra bonus' ? ' + ' + state.tripData.tip : ''}`;
+          const whatsappUrl = `https://wa.me/34661874906?text=${encodeURIComponent(whatsappMessage)}`;
+          window.open(whatsappUrl, '_blank');
+        });
+      }
+
+      // Alert
+      const closeAlertBtn = document.getElementById('close-alert-btn');
+      if (closeAlertBtn) {
+        closeAlertBtn.addEventListener('click', () => {
+          state.showAlert = false;
+          render();
+        });
+      }
+    }
+
+    function startSearching() {
+      clearInterval(searchInterval);
+      searchInterval = setInterval(() => {
+        if (state.searchingStatus < searchingMessages.length) {
+          state.searchingStatus++;
+          render();
+        } else {
+          clearInterval(searchInterval);
+        }
+      }, 2000);
+    }
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
