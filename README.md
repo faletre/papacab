@@ -24,10 +24,10 @@ Para probar la PWA:
 
 En `index.html`, busca la línea:
 ```javascript
-const whatsappUrl = `https://wa.me/34661874906?text=${encodeURIComponent(whatsappMessage)}`;
+const whatsappUrl = `https://wa.me/34XXXXXXXXX?text=${encodeURIComponent(whatsappMessage)}`;
 ```
 
-Reemplaza `34661874906` con tu número de teléfono (incluyendo el código de país).
+Reemplaza `34XXXXXXXXX` con tu número de teléfono (incluyendo el código de país).
 
 ## Iconos PWA
 
